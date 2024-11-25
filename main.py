@@ -1,7 +1,7 @@
 import tkinter as tk
-from tkinter import ttk, Toplevel, messagebox
+from tkinter import ttk, Toplevel, messagebox, filedialog
 from tkcalendar import DateEntry
-import json
+import json, csv, os
 from datetime import datetime
 
 # Файл для сохранения данных
@@ -9,7 +9,6 @@ data_file = 'training_log.json'
 
 
 def load_data():
-	"""Загрузка данных о тренировках из файла."""
 	try:
 		with open(data_file, 'r') as file:
 			return json.load(file)
@@ -23,43 +22,87 @@ def save_data(data):
 		json.dump(data, file, indent=4)
 
 
+def open_file():
+	global data_file
+	file_path = filedialog.askopenfilename(
+		title="Select a JSON file",
+		filetypes=(("JSON Files", "*.json"), ("All Files", "*.*"))
+	)
+	data_file = file_path
+	return data_file
+
+
 class TrainingLogApp:
 	def __init__(self, root):
 		self.root = root
 		root.title("Training Journal")
 		self.date_entry_label = ttk.Label(self.root, text="Date:")
-		self.date_entry = DateEntry(self.root, width=12, background="darkblue", foreground="white", borderwidth=2)
+		self.date_entry = DateEntry(
+			self.root, width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
+			background="darkgrey",
+			foreground="black",
+			headersbackground="grey",
+			headersforeground="black",
+			selectbackground="green",
+			selectforeground="white"
+		)
 		self.exercise_label = ttk.Label(self.root, text="Exercise:")
 		self.exercise_entry = ttk.Entry(self.root)
 		self.weight_label = ttk.Label(self.root, text="Weight (kg):")
 		self.weight_entry = ttk.Entry(self.root)
 		self.repetitions_label = ttk.Label(self.root, text="Repetitions:")
 		self.repetitions_entry = ttk.Entry(self.root)
+		self.file_name_label = ttk.Label(self.root, text='File name:', anchor="e")
+		self.file_name_value = ttk.Label(self.root, text=os.path.basename(data_file))
+		self.size_label = ttk.Label(self.root, text='Size:', anchor="e")
+		self.size_label_value = ttk.Label(self.root, text=f"{round(os.path.getsize(data_file)/1024, 2)} KB")
+		self.created_label = ttk.Label(self.root, text='Created:', anchor="e")
+		self.created_label_value = ttk.Label(self.root, text=datetime.fromtimestamp(os.path.getctime(data_file)).strftime('%Y-%m-%d %H:%M:%S'))
+		self.modified_label = ttk.Label(self.root, text='Modified:', anchor="e")
+		self.modified_label_value = ttk.Label(self.root, text=datetime.fromtimestamp(os.path.getmtime(data_file)).strftime('%Y-%m-%d %H:%M:%S'))
+		self.rows_label = ttk.Label(self.root, text='Rows:', anchor="e")
+		self.rows_label_values = ttk.Label(self.root, text=len(load_data()))
 		self.add_button = ttk.Button(self.root, text="Add", command=self.add_entry)
 		self.view_button = ttk.Button(self.root, text="View all", command=self.view_records)
+		self.open_button = ttk.Button(self.root, text='Open JSON', command=open_file)
 		self.create_widgets()
 
 	def create_widgets(self):
 		# Виджеты для ввода данных
-		self.date_entry_label.grid(column=0, row=0, sticky=tk.W, padx=5, pady=5)
-		self.date_entry.grid(column=1, row=0, sticky=tk.W, padx=5, pady=5)
-		self.exercise_label.grid(column=0, row=1, sticky=tk.W, padx=5, pady=5)
-		self.exercise_entry.grid(column=1, row=1, sticky=tk.EW, padx=5, pady=5)
-		self.weight_label.grid(column=0, row=2, sticky=tk.W, padx=5, pady=5)
-		self.weight_entry.grid(column=1, row=2, sticky=tk.EW, padx=5, pady=5)
-		self.repetitions_label.grid(column=0, row=3, sticky=tk.W, padx=5, pady=5)
-		self.repetitions_entry.grid(column=1, row=3, sticky=tk.EW, padx=5, pady=5)
-		self.add_button.grid(column=0, row=4, columnspan=2, pady=10)
-		self.view_button.grid(column=0, row=5, columnspan=2, pady=10)
+		self.date_entry_label.grid(column=0, row=0, sticky='ew', padx=5, pady=5)
+		self.date_entry.grid(column=1, row=0, sticky='ew', padx=5, pady=5)
+		self.exercise_label.grid(column=0, row=1, sticky='ew', padx=5, pady=5)
+		self.exercise_entry.grid(column=1, row=1, sticky='ew', padx=5, pady=5)
+		self.weight_label.grid(column=0, row=2, sticky='ew', padx=5, pady=5)
+		self.weight_entry.grid(column=1, row=2, sticky='ew', padx=5, pady=5)
+		self.repetitions_label.grid(column=0, row=3, sticky='ew', padx=5, pady=5)
+		self.repetitions_entry.grid(column=1, row=3, sticky='ew', padx=5, pady=5)
+		self.file_name_label.grid(column=3, row=0, sticky='ew', padx=5, pady=0)
+		self.file_name_value.grid(column=4, row=0, sticky='ew', padx=5, pady=0)
+		self.size_label.grid(column=3, row=1, sticky='ew', padx=5, pady=0)
+		self.size_label_value.grid(column=4, row=1, sticky='ew', padx=5, pady=0)
+		self.created_label.grid(column=3, row=2, sticky='ew', padx=5, pady=0)
+		self.created_label_value.grid(column=4, row=2, sticky='ew', padx=5, pady=0)
+		self.modified_label.grid(column=3, row=3, sticky='ew', padx=5, pady=0)
+		self.modified_label_value.grid(column=4, row=3, sticky='ew', padx=5, pady=0)
+		self.rows_label.grid(column=3, row=4, sticky='ew', padx=5, pady=0)
+		self.rows_label_values.grid(column=4, row=4, sticky='ew', padx=5, pady=0)
+		self.add_button.grid(column=1, row=4, pady=5)
+		self.view_button.grid(column=4, row=6, pady=5)
+		self.open_button.grid(column=4, row=7, pady=5)
 
 	def add_entry(self):
-		date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+		date = self.date_entry.get()
 		exercise = self.exercise_entry.get()
 		weight = self.weight_entry.get()
 		repetitions = self.repetitions_entry.get()
-
 		if not (exercise and weight and repetitions):
 			messagebox.showerror("Error", "All fields must be filled!")
+			return
+		try:
+			weight, repetitions = map(int, (weight, repetitions))
+		except ValueError:
+			messagebox.showerror("Error", "Weight and Repetitions fields must be integers!")
 			return
 
 		entry = {
@@ -84,20 +127,18 @@ class TrainingLogApp:
 		records_window = Toplevel(self.root)
 		records_window.title("Records")
 
+		records_window.grid_columnconfigure(0, weight=1)
+		records_window.grid_rowconfigure(1, weight=1)
+		records_window.grid_rowconfigure(2, weight=0)
+
 		tool_box = tk.Frame(records_window)
-		tool_box.pack(side=tk.TOP, fill=tk.X, pady=2)
+		tool_box.grid(row=0, column=0, sticky="ew", padx=1, pady=(0, 5))
 
 		csv_icon = tk.PhotoImage(file="images/save.png")
-		csv_button = tk.Button(tool_box, image=csv_icon)
+		csv_button = tk.Button(tool_box, image=csv_icon, command=lambda: export_to_csv(tree))
 		csv_button.image = csv_icon
 		csv_button.pack(side=tk.LEFT, padx=2)
 		self.add_tooltip(csv_button, "Save to csv")
-
-		upload_icon = tk.PhotoImage(file="images/open.png")
-		upload_button = tk.Button(tool_box, image=upload_icon)
-		upload_button.image = upload_icon
-		upload_button.pack(side=tk.LEFT, padx=2)
-		self.add_tooltip(upload_button, "Load from csv")
 
 		headings = ["Date", "Exercise", "Weight", "Repetitions"]
 		tree = ttk.Treeview(records_window, columns=headings, show="headings")
@@ -106,47 +147,83 @@ class TrainingLogApp:
 			if i != 0:
 				tree.column(j, anchor="center")
 
-		def display_data(filtered_data):
-			tree.delete(*tree.get_children())  # Очищаем существующие записи
-			for entry in filtered_data:
-				tree.insert('', tk.END,
-							values=(entry['date'], entry['exercise'], entry['weight'], entry['repetitions']))
+		def display_data(data_):
+			tree.delete(*tree.get_children())
+			for entry in data_:
+				tree.insert(
+					'', tk.END,
+					values=(entry['date'], entry['exercise'], entry['weight'], entry['repetitions'])
+				)
+
 		display_data(data)
+		tree.grid(row=1, column=0, sticky="nsew", padx=1, pady=(2, 0))
 
-		tree.pack(side=tk.TOP, expand=True, fill=tk.BOTH, pady=0, padx=2)
-
-		# Создаем фрейм для поисковой строки и фильтров
 		filter_frame = tk.Frame(records_window)
-		filter_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=0)
-
+		filter_frame.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
 		filter_frame.columnconfigure(0, weight=7)
 		filter_frame.columnconfigure(1, weight=1)
-
 		search_entry = tk.Entry(filter_frame)
-		search_entry.grid(row=0, column=0, sticky="ew", padx=2)
-
-		start_date_entry = DateEntry(filter_frame, width=12, background="darkblue", foreground="white", borderwidth=2)
-		start_date_entry.grid(row=0, column=1, sticky="ew", padx=2)
-
-		end_date_entry = DateEntry(filter_frame, width=12, background="darkblue", foreground="white", borderwidth=2)
-		end_date_entry.grid(row=0, column=2, sticky="ew", padx=2)
-
-		# Кнопка для применения фильтра
+		search_entry.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
+		start_date_entry = DateEntry(
+			filter_frame,
+			width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
+			background="darkgrey",
+			foreground="black",
+			headersbackground="grey",
+			headersforeground="black",
+			selectbackground="green",
+			selectforeground="white"
+		)
+		start_date_entry.grid(row=2, column=1, sticky="ew", padx=0, pady=(0, 2))
+		end_date_entry = DateEntry(
+			filter_frame,
+			width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
+			background="darkgrey",
+			foreground="black",
+			headersbackground="grey",
+			headersforeground="black",
+			selectbackground="green",
+			selectforeground="white"
+		)
+		end_date_entry.grid(row=2, column=2, sticky="ew", padx=0, pady=(0, 2))
 		apply_button = tk.Button(filter_frame, text="Request", command=lambda: apply_filter())
-		apply_button.grid(row=0, column=3, sticky="ew", padx=2)
+		apply_button.grid(row=2, column=3, sticky="ew", padx=2, pady=(2, 2))
 
 		def apply_filter():
-			search_filter = search_entry.get().strip().lower()
+			search = search_entry.get().strip().lower()
 			start_date = start_date_entry.get_date()
 			end_date = end_date_entry.get_date()
-
-			# Фильтруем данные по упражнению и диапазону дат
-			filtered_data = [
-				entry for entry in data
-				if (not search_filter or search_filter in entry['exercise'].lower())
-				   and (start_date <= datetime.strptime(entry['date'], "%Y-%m-%d").date() <= end_date)
-			]
+			filtered_data = [entry for entry in data
+							 if ('*' in search or not search or search in entry['exercise'].lower())
+							 and (start_date <= datetime.strptime(entry['date'], "%d.%m.%Y").date() <= end_date)
+							 ]
 			display_data(filtered_data)
+			search_entry.delete(0, tk.END)
+
+		def export_to_csv(training_list):
+			try:
+				file_path = filedialog.asksaveasfilename(
+					title="Save as",
+					defaultextension=".csv",
+					filetypes=(("CSV Files", "*.csv"), ("All Files", "*.*"))
+				)
+				if not file_path:
+					return
+				data_ = []
+				for row_id in training_list.get_children():
+					row = training_list.item(row_id)['values']
+					data_.append(row)
+				if not data_:
+					messagebox.showinfo("Info", "No data to export.")
+					return
+				headers = [training_list.heading(col)["text"] for col in training_list["columns"]]
+				with open(file_path, mode="w", newline="", encoding="utf-8") as file:
+					writer = csv.writer(file)
+					writer.writerow(headers)
+					writer.writerows(data_)
+				messagebox.showinfo("Success", f"Data exported successfully to {file_path}!")
+			except Exception as e:
+				messagebox.showerror("Error", f"An error occurred: {e}")
 
 	@staticmethod
 	def add_tooltip(widget, text):
