@@ -7,8 +7,8 @@ from datetime import datetime
 
 class TrainingLogApp:
 	def __init__(self, root):
-		self.data_file = ''
-		self.open_file()
+		self.data_file = None
+		# self.open_file()
 		self.root = root
 		root.title("Training Journal")
 		self.date_entry_label = ttk.Label(self.root, text="Date:")
@@ -66,7 +66,10 @@ class TrainingLogApp:
 			'weight': weight,
 			'repetitions': repetitions
 		}
-		data = self.load_data()
+		if self.data_file:
+			data = self.load_data()
+		else:
+			data = []
 		data.append(entry)
 		self.save_data(data)
 
@@ -88,6 +91,8 @@ class TrainingLogApp:
 			return json.load(file)
 
 	def save_data(self, data):
+		if not self.data_file:
+			self.data_file = 'training_journal.json'
 		with open(self.data_file, 'w') as file:
 			json.dump(data, file, indent=4)
 
@@ -130,39 +135,6 @@ class TrainingLogApp:
 		widget.bind('<Leave>', hide_tooltip)
 
 	def view_records(self):
-		data = self.load_data()
-		records_window = Toplevel(self.root)
-		records_window.title("Records")
-
-		records_window.grid_columnconfigure(0, weight=1)
-		records_window.grid_rowconfigure(1, weight=1)
-		records_window.grid_rowconfigure(2, weight=0)
-
-		tool_box = tk.Frame(records_window)
-		tool_box.grid(row=0, column=0, sticky="ew", padx=1, pady=(0, 5))
-
-		csv_icon = tk.PhotoImage(file="images/save.png")
-		csv_button = tk.Button(tool_box, image=csv_icon, command=lambda: export_to_csv(tree))
-		csv_button.image = csv_icon
-		csv_button.pack(side=tk.LEFT, padx=2)
-		self.add_tooltip(csv_button, "Save to csv")
-
-		file_name_label = tk.Label(tool_box, text="File name:", font=("Arial", 10, "bold"))
-		file_name_value = tk.Label(tool_box, text=os.path.basename(self.data_file))
-		rows_label = tk.Label(tool_box, text=f"Rows:", font=("Arial", 10, "bold"))
-		rows_value = tk.Label(tool_box, text=len(self.load_data()))
-		rows_value.pack(side=tk.RIGHT)
-		rows_label.pack(side=tk.RIGHT)
-		file_name_value.pack(side=tk.RIGHT)
-		file_name_label.pack(side=tk.RIGHT)
-
-		headings = ["Date", "Exercise", "Weight", "Repetitions"]
-		tree = ttk.Treeview(records_window, columns=headings, show="headings")
-		for i, j in enumerate(headings):
-			tree.heading(j, text=j)
-			if i != 0:
-				tree.column(j, anchor="center")
-
 		def display_data(data_):
 			tree.delete(*tree.get_children())
 			for entry in data_:
@@ -170,40 +142,6 @@ class TrainingLogApp:
 					'', tk.END,
 					values=(entry['date'], entry['exercise'], entry['weight'], entry['repetitions'])
 				)
-
-		display_data(data)
-		tree.grid(row=1, column=0, sticky="nsew", padx=1, pady=(2, 0))
-
-		filter_frame = tk.Frame(records_window)
-		filter_frame.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
-		filter_frame.columnconfigure(0, weight=7)
-		filter_frame.columnconfigure(1, weight=1)
-		search_entry = tk.Entry(filter_frame)
-		search_entry.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
-		start_date_entry = DateEntry(
-			filter_frame,
-			width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
-			background="darkgrey",
-			foreground="black",
-			headersbackground="grey",
-			headersforeground="black",
-			selectbackground="green",
-			selectforeground="white"
-		)
-		start_date_entry.grid(row=2, column=1, sticky="ew", padx=0, pady=(0, 2))
-		end_date_entry = DateEntry(
-			filter_frame,
-			width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
-			background="darkgrey",
-			foreground="black",
-			headersbackground="grey",
-			headersforeground="black",
-			selectbackground="green",
-			selectforeground="white"
-		)
-		end_date_entry.grid(row=2, column=2, sticky="ew", padx=0, pady=(0, 2))
-		apply_button = tk.Button(filter_frame, text="Request", command=lambda: apply_filter())
-		apply_button.grid(row=2, column=3, sticky="ew", padx=2, pady=(2, 2))
 
 		def apply_filter():
 			search = search_entry.get().strip().lower()
@@ -240,6 +178,73 @@ class TrainingLogApp:
 				messagebox.showinfo("Success", f"Data exported successfully to {file_path}!")
 			except Exception as e:
 				messagebox.showerror("Error", f"An error occurred: {e}")
+
+		data = self.load_data()
+		records_window = Toplevel(self.root)
+		records_window.title("Records")
+
+		records_window.grid_columnconfigure(0, weight=1)
+		records_window.grid_rowconfigure(1, weight=1)
+		records_window.grid_rowconfigure(2, weight=0)
+
+		tool_box = tk.Frame(records_window)
+		tool_box.grid(row=0, column=0, sticky="ew", padx=1, pady=(0, 5))
+
+		csv_icon = tk.PhotoImage(file="images/save.png")
+		csv_button = tk.Button(tool_box, image=csv_icon, command=lambda: export_to_csv(tree))
+		csv_button.image = csv_icon
+		csv_button.pack(side=tk.LEFT, padx=2)
+		self.add_tooltip(csv_button, "Save to csv")
+
+		file_name_label = tk.Label(tool_box, text="File name:", font=("Arial", 10, "bold"))
+		file_name_value = tk.Label(tool_box, text=os.path.basename(self.data_file))
+		rows_label = tk.Label(tool_box, text=f"Rows:", font=("Arial", 10, "bold"))
+		rows_value = tk.Label(tool_box, text=len(self.load_data()))
+		rows_value.pack(side=tk.RIGHT)
+		rows_label.pack(side=tk.RIGHT)
+		file_name_value.pack(side=tk.RIGHT)
+		file_name_label.pack(side=tk.RIGHT)
+
+		headings = ["Date", "Exercise", "Weight", "Repetitions"]
+		tree = ttk.Treeview(records_window, columns=headings, show="headings")
+		for i, j in enumerate(headings):
+			tree.heading(j, text=j)
+			if i != 0:
+				tree.column(j, anchor="center")
+
+		display_data(data)
+		tree.grid(row=1, column=0, sticky="nsew", padx=1, pady=(2, 0))
+
+		filter_frame = tk.Frame(records_window)
+		filter_frame.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
+		filter_frame.columnconfigure(0, weight=7)
+		filter_frame.columnconfigure(1, weight=1)
+		search_entry = tk.Entry(filter_frame)
+		search_entry.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
+		start_date_entry = DateEntry(
+			filter_frame,
+			width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
+			background="darkgrey",
+			foreground="black",
+			headersbackground="grey",
+			headersforeground="black",
+			selectbackground="green",
+			selectforeground="white"
+		)
+		start_date_entry.grid(row=2, column=1, sticky="ew", padx=0, pady=(0, 2))
+		end_date_entry = DateEntry(
+			filter_frame,
+			width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
+			background="darkgrey",
+			foreground="black",
+			headersbackground="grey",
+			headersforeground="black",
+			selectbackground="green",
+			selectforeground="white"
+		)
+		end_date_entry.grid(row=2, column=2, sticky="ew", padx=0, pady=(0, 2))
+		apply_button = tk.Button(filter_frame, text="Request", command=lambda: apply_filter())
+		apply_button.grid(row=2, column=3, sticky="ew", padx=2, pady=(2, 2))
 
 
 def main():
