@@ -4,36 +4,11 @@ from tkcalendar import DateEntry
 import json, csv, os
 from datetime import datetime
 
-# Файл для сохранения данных
-data_file = 'training_log.json'
-
-
-def load_data():
-	try:
-		with open(data_file, 'r') as file:
-			return json.load(file)
-	except (FileNotFoundError, json.JSONDecodeError):
-		return []
-
-
-def save_data(data):
-	"""Сохранение данных о тренировках в файл."""
-	with open(data_file, 'w') as file:
-		json.dump(data, file, indent=4)
-
-
-def open_file():
-	global data_file
-	file_path = filedialog.askopenfilename(
-		title="Select a JSON file",
-		filetypes=(("JSON Files", "*.json"), ("All Files", "*.*"))
-	)
-	data_file = file_path
-	return data_file
-
 
 class TrainingLogApp:
 	def __init__(self, root):
+		self.data_file = ''
+		self.open_file()
 		self.root = root
 		root.title("Training Journal")
 		self.date_entry_label = ttk.Label(self.root, text="Date:")
@@ -52,44 +27,24 @@ class TrainingLogApp:
 		self.weight_entry = ttk.Entry(self.root)
 		self.repetitions_label = ttk.Label(self.root, text="Repetitions:")
 		self.repetitions_entry = ttk.Entry(self.root)
-		self.file_name_label = ttk.Label(self.root, text='File name:', anchor="e")
-		self.file_name_value = ttk.Label(self.root, text=os.path.basename(data_file))
-		self.size_label = ttk.Label(self.root, text='Size:', anchor="e")
-		self.size_label_value = ttk.Label(self.root, text=f"{round(os.path.getsize(data_file)/1024, 2)} KB")
-		self.created_label = ttk.Label(self.root, text='Created:', anchor="e")
-		self.created_label_value = ttk.Label(self.root, text=datetime.fromtimestamp(os.path.getctime(data_file)).strftime('%Y-%m-%d %H:%M:%S'))
-		self.modified_label = ttk.Label(self.root, text='Modified:', anchor="e")
-		self.modified_label_value = ttk.Label(self.root, text=datetime.fromtimestamp(os.path.getmtime(data_file)).strftime('%Y-%m-%d %H:%M:%S'))
-		self.rows_label = ttk.Label(self.root, text='Rows:', anchor="e")
-		self.rows_label_values = ttk.Label(self.root, text=len(load_data()))
 		self.add_button = ttk.Button(self.root, text="Add", command=self.add_entry)
 		self.view_button = ttk.Button(self.root, text="View all", command=self.view_records)
-		self.open_button = ttk.Button(self.root, text='Open JSON', command=open_file)
+		self.open_button = ttk.Button(self.root, text='Open JSON', command=self.open_file)
 		self.create_widgets()
 
 	def create_widgets(self):
 		# Виджеты для ввода данных
-		self.date_entry_label.grid(column=0, row=0, sticky='ew', padx=5, pady=5)
-		self.date_entry.grid(column=1, row=0, sticky='ew', padx=5, pady=5)
-		self.exercise_label.grid(column=0, row=1, sticky='ew', padx=5, pady=5)
-		self.exercise_entry.grid(column=1, row=1, sticky='ew', padx=5, pady=5)
-		self.weight_label.grid(column=0, row=2, sticky='ew', padx=5, pady=5)
-		self.weight_entry.grid(column=1, row=2, sticky='ew', padx=5, pady=5)
-		self.repetitions_label.grid(column=0, row=3, sticky='ew', padx=5, pady=5)
-		self.repetitions_entry.grid(column=1, row=3, sticky='ew', padx=5, pady=5)
-		self.file_name_label.grid(column=3, row=0, sticky='ew', padx=5, pady=0)
-		self.file_name_value.grid(column=4, row=0, sticky='ew', padx=5, pady=0)
-		self.size_label.grid(column=3, row=1, sticky='ew', padx=5, pady=0)
-		self.size_label_value.grid(column=4, row=1, sticky='ew', padx=5, pady=0)
-		self.created_label.grid(column=3, row=2, sticky='ew', padx=5, pady=0)
-		self.created_label_value.grid(column=4, row=2, sticky='ew', padx=5, pady=0)
-		self.modified_label.grid(column=3, row=3, sticky='ew', padx=5, pady=0)
-		self.modified_label_value.grid(column=4, row=3, sticky='ew', padx=5, pady=0)
-		self.rows_label.grid(column=3, row=4, sticky='ew', padx=5, pady=0)
-		self.rows_label_values.grid(column=4, row=4, sticky='ew', padx=5, pady=0)
-		self.add_button.grid(column=1, row=4, pady=5)
-		self.view_button.grid(column=4, row=6, pady=5)
-		self.open_button.grid(column=4, row=7, pady=5)
+		self.date_entry_label.grid(column=0, row=0, sticky='ew', padx=5, pady=1)
+		self.date_entry.grid(column=1, row=0, sticky='ew', padx=5, pady=1)
+		self.exercise_label.grid(column=0, row=1, sticky='ew', padx=5, pady=1)
+		self.exercise_entry.grid(column=1, row=1, sticky='ew', padx=5, pady=1)
+		self.weight_label.grid(column=0, row=2, sticky='ew', padx=5, pady=1)
+		self.weight_entry.grid(column=1, row=2, sticky='ew', padx=5, pady=1)
+		self.repetitions_label.grid(column=0, row=3, sticky='ew', padx=5, pady=1)
+		self.repetitions_entry.grid(column=1, row=3, sticky='ew', padx=5, pady=1)
+		self.add_button.grid(column=0, row=4, pady=5)
+		self.view_button.grid(column=0, row=5, pady=5)
+		self.open_button.grid(column=0, row=6, pady=5)
 
 	def add_entry(self):
 		date = self.date_entry.get()
@@ -111,10 +66,9 @@ class TrainingLogApp:
 			'weight': weight,
 			'repetitions': repetitions
 		}
-
-		data = load_data()
+		data = self.load_data()
 		data.append(entry)
-		save_data(data)
+		self.save_data(data)
 
 		# Очистка полей ввода после добавления
 		self.exercise_entry.delete(0, tk.END)
@@ -122,8 +76,61 @@ class TrainingLogApp:
 		self.repetitions_entry.delete(0, tk.END)
 		messagebox.showinfo("Success", "Exercise has been added!")
 
+	def open_file(self):
+		file_path = filedialog.askopenfilename(
+			title="Select a JSON file",
+			filetypes=(("JSON Files", "*.json"), ("All Files", "*.*"))
+		)
+		self.data_file = file_path
+
+	def load_data(self):
+		with open(self.data_file, 'r') as file:
+			return json.load(file)
+
+	def save_data(self, data):
+		with open(self.data_file, 'w') as file:
+			json.dump(data, file, indent=4)
+
+	@staticmethod
+	def add_tooltip(widget, text):
+		"""
+			This method creates a `Toplevel` window that appears near the widget when
+			the mouse cursor enters the widget's area, displaying the specified tooltip text.
+			The tooltip window closes automatically when the mouse cursor leaves the widget area.
+
+			Args:
+				widget (tk.Widget): The widget to which the tooltip will be attached.
+				text (str): The text to display within the tooltip window.
+
+			Inside the method:
+				- `show_tooltip(event)`: A function to create and display the tooltip near the widget.
+				- `hide_tooltip(event)`: A function to destroy the tooltip when the mouse leaves the widget area.
+		"""
+		tooltip = None
+
+		def show_tooltip(event):
+			nonlocal tooltip
+			if tooltip is not None:
+				return
+			x = widget.winfo_rootx() + 20
+			y = widget.winfo_rooty() + widget.winfo_height() + 5
+			tooltip = tk.Toplevel(widget)
+			tooltip.wm_overrideredirect(True)
+			tooltip.wm_geometry(f"+{x}+{y}")
+			label = tk.Label(tooltip, text=text, background='white', relief='solid', borderwidth=1, padx=5, pady=3)
+			label.pack()
+
+		def hide_tooltip(event):
+			nonlocal tooltip
+			if isinstance(tooltip, tk.Toplevel):
+				tooltip.destroy()
+				tooltip = None
+
+		widget.bind('<Enter>', show_tooltip)
+		widget.bind('<Leave>', hide_tooltip)
+
 	def view_records(self):
-		data = load_data()
+		data = self.load_data()
 		records_window = Toplevel(self.root)
 		records_window.title("Records")
 
@@ -139,6 +146,15 @@ class TrainingLogApp:
 		csv_button.image = csv_icon
 		csv_button.pack(side=tk.LEFT, padx=2)
 		self.add_tooltip(csv_button, "Save to csv")
+
+		file_name_label = tk.Label(tool_box, text="File name:", font=("Arial", 10, "bold"))
+		file_name_value = tk.Label(tool_box, text=os.path.basename(self.data_file))
+		rows_label = tk.Label(tool_box, text=f"Rows:", font=("Arial", 10, "bold"))
+		rows_value = tk.Label(tool_box, text=len(self.load_data()))
+		rows_value.pack(side=tk.RIGHT)
+		rows_label.pack(side=tk.RIGHT)
+		file_name_value.pack(side=tk.RIGHT)
+		file_name_label.pack(side=tk.RIGHT)
 
 		headings = ["Date", "Exercise", "Weight", "Repetitions"]
 		tree = ttk.Treeview(records_window, columns=headings, show="headings")
@@ -224,44 +240,6 @@ class TrainingLogApp:
 				messagebox.showinfo("Success", f"Data exported successfully to {file_path}!")
 			except Exception as e:
 				messagebox.showerror("Error", f"An error occurred: {e}")
-
-	@staticmethod
-	def add_tooltip(widget, text):
-		"""
-			This method creates a `Toplevel` window that appears near the widget when
-			the mouse cursor enters the widget's area, displaying the specified tooltip text.
-			The tooltip window closes automatically when the mouse cursor leaves the widget area.
-
-			Args:
-				widget (tk.Widget): The widget to which the tooltip will be attached.
-				text (str): The text to display within the tooltip window.
-
-			Inside the method:
-				- `show_tooltip(event)`: A function to create and display the tooltip near the widget.
-				- `hide_tooltip(event)`: A function to destroy the tooltip when the mouse leaves the widget area.
-		"""
-		tooltip = None
-
-		def show_tooltip(event):
-			nonlocal tooltip
-			if tooltip is not None:
-				return
-			x = widget.winfo_rootx() + 20
-			y = widget.winfo_rooty() + widget.winfo_height() + 5
-			tooltip = tk.Toplevel(widget)
-			tooltip.wm_overrideredirect(True)
-			tooltip.wm_geometry(f"+{x}+{y}")
-			label = tk.Label(tooltip, text=text, background='white', relief='solid', borderwidth=1, padx=5, pady=3)
-			label.pack()
-
-		def hide_tooltip(event):
-			nonlocal tooltip
-			if isinstance(tooltip, tk.Toplevel):
-				tooltip.destroy()
-				tooltip = None
-
-		widget.bind('<Enter>', show_tooltip)
-		widget.bind('<Leave>', hide_tooltip)
 
 
 def main():
