@@ -69,7 +69,7 @@ class TrainingLogApp:
 			self.data = self.load_data()
 		self.data.append(entry)
 		self.save_data()
-		self.display_data(self.data)
+		# self.display_data(self.data)
 
 		# Очистка полей ввода после добавления
 		self.exercise_entry.delete(0, tk.END)
@@ -221,7 +221,6 @@ class TrainingLogApp:
 					entry_widgets.append(entry)
 
 				def save_changes():
-					"""Сохраняет изменения."""
 					new_values = [k.get() for k in entry_widgets]
 					tree.item(selected_row, values=new_values)
 					ind_row = tree.index(selected_row)
