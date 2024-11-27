@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, Toplevel, messagebox, filedialog
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkcalendar import DateEntry
 import json, csv, os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class TrainingLogApp:
@@ -13,6 +15,7 @@ class TrainingLogApp:
 
 		self.data_file = None
 		self.data = []
+		self.filtered_data = []
 		self.date_entry_label = ttk.Label(self.root, text="Date:")
 		self.date_entry = DateEntry(
 			self.root, width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
@@ -84,19 +87,22 @@ class TrainingLogApp:
 		if self.data_file:
 			self.data = self.load_data()
 		self.data.append(entry)
-		self.save_data()
-
-		# Очистка полей ввода после добавления
-		self.exercise_entry.delete(0, tk.END)
-		self.weight_entry.delete(0, tk.END)
-		self.repetitions_entry.delete(0, tk.END)
-		messagebox.showinfo("Success", "Exercise has been added!")
+		if self.save_data():
+			# Очистка полей ввода после добавления
+			self.exercise_entry.delete(0, tk.END)
+			self.weight_entry.delete(0, tk.END)
+			self.repetitions_entry.delete(0, tk.END)
+			messagebox.showinfo("Success", "Exercise has been added!")
+		else:
+			pass
 
 	def open_file(self):
 		file_path = filedialog.askopenfilename(
 			title="Select a JSON file",
 			filetypes=(("JSON Files", "*.json"), ("All Files", "*.*"))
 		)
+		if not file_path:
+			return
 		self.data_file = file_path
 		self.view_records()
 		self.view_button.config(state='enabled')
@@ -108,8 +114,21 @@ class TrainingLogApp:
 	def save_data(self):
 		if not self.data_file:
 			self.data_file = 'training_journal.json'
-		with open(self.data_file, 'w') as file:
-			json.dump(self.data, file, indent=4)
+			if os.path.exists(self.data_file):
+				confirm = messagebox.askyesno(
+					"File Exists",
+					f"The file '{self.data_file}' already exists. Do you want to overwrite it?"
+				)
+				if not confirm:
+					return False
+				else:
+					with open(self.data_file, 'w') as file:
+						json.dump(self.data, file, indent=4)
+					return True
+		else:
+			with open(self.data_file, 'w') as file:
+				json.dump(self.data, file, indent=4)
+				return True
 
 	@staticmethod
 	def add_tooltip(widget, text):
@@ -137,8 +156,10 @@ class TrainingLogApp:
 			tooltip = tk.Toplevel(widget)
 			tooltip.wm_overrideredirect(True)
 			tooltip.wm_geometry(f"+{x}+{y}")
-			label = tk.Label(tooltip, text=text, background='white', relief='solid', borderwidth=1, padx=5, pady=3)
-			label.pack()
+			label = tk.Label(
+				tooltip, text=text, background='white', relief='solid', borderwidth=1, padx=5, pady=3, justify="left"
+			)
+			label.pack(side=tk.LEFT, fill='both', expand=True)
 
 		def hide_tooltip(event):
 			nonlocal tooltip
@@ -162,11 +183,11 @@ class TrainingLogApp:
 			search = search_entry.get().strip().lower()
 			start_date = start_date_entry.get_date()
 			end_date = end_date_entry.get_date()
-			filtered_data = [entry for entry in self.data
+			self.filtered_data = [entry for entry in self.data
 							 if ('*' in search or not search or search in entry['exercise'].lower())
 							 and (start_date <= datetime.strptime(entry['date'], "%d.%m.%Y").date() <= end_date)
 							 ]
-			display_data(filtered_data)
+			display_data(self.filtered_data)
 			search_entry.delete(0, tk.END)
 
 		def import_from_csv():
@@ -213,6 +234,39 @@ class TrainingLogApp:
 					writer.writerows(data_)
 			except Exception as e:
 				messagebox.showerror("Error", f"An error occurred: {e}")
+
+		def visual_repr():
+			data = {}
+			for entry in self.filtered_data:
+				exercise = entry["exercise"]
+				if exercise not in data:
+					data[exercise] = {"dates": [], "weights": []}
+				data[exercise]["dates"].append(entry["date"])
+				data[exercise]["weights"].append(entry["weight"])
+			# Создаем фигуру для графика
+			fig = Figure(figsize=(8, 6), dpi=100)
+			ax = fig.add_subplot(111)  # Одиночный график
+
+			# Построение графиков для каждого упражнения
+			for exercise, values in data.items():
+				ax.plot(values["dates"], values["weights"], label=exercise, marker="o")
+
+			# Настройка графика
+			ax.set_title("Изменение веса по упражнениям")
+			ax.set_xlabel("Дата")
+			ax.set_ylabel("Вес")
+			ax.legend()
+			ax.grid()
+
+			graph_window = Toplevel()
+			graph_window.title("График изменения веса")
+			graph_window.geometry("900x400")
+
+			# Встраиваем Matplotlib в Tkinter
+			canvas = FigureCanvasTkAgg(fig, master=graph_window)
+			canvas_widget = canvas.get_tk_widget()
+			canvas_widget.pack(fill=tk.BOTH, expand=True)
+			canvas.draw()
 
 		def create_context_menu(tree):
 			menu = tk.Menu(tree, tearoff=0)
@@ -333,6 +387,7 @@ class TrainingLogApp:
 			tree.bind("<Leave>", lambda e: destroy_hover_icons())
 
 		self.data = self.load_data()
+
 		records_window = Toplevel(self.root)
 		records_window.title("Records")
 		records_window.geometry(f"{800}x{300}+{(records_window.winfo_screenwidth() - 800) // 2}+{(records_window.winfo_screenheight() - 300) // 2}")
@@ -347,23 +402,33 @@ class TrainingLogApp:
 		import_icon = tk.PhotoImage(file="images/import.png")
 		import_button = tk.Button(tool_box, image=import_icon, command=lambda: import_from_csv())
 		import_button.image = import_icon
-		import_button.pack(side=tk.LEFT, padx=2)
+		import_button.pack(side=tk.LEFT, padx=2, pady=(2, 0))
 		self.add_tooltip(import_button, "Import from csv")
 
 		export_icon = tk.PhotoImage(file="images/export.png")
 		export_button = tk.Button(tool_box, image=export_icon, command=lambda: export_to_csv(table))
 		export_button.image = export_icon
-		export_button.pack(side=tk.LEFT, padx=2)
+		export_button.pack(side=tk.LEFT, padx=2, pady=(2, 0))
 		self.add_tooltip(export_button, "Export to csv")
 
-		file_name_label = tk.Label(tool_box, text="File name:", font=("Arial", 10, "bold"))
-		file_name_value = tk.Label(tool_box, text=os.path.basename(self.data_file))
-		rows_label = tk.Label(tool_box, text=f"Rows:", font=("Arial", 10, "bold"))
-		rows_value = tk.Label(tool_box, text=len(self.load_data()))
-		rows_value.pack(side=tk.RIGHT)
-		rows_label.pack(side=tk.RIGHT)
-		file_name_value.pack(side=tk.RIGHT)
-		file_name_label.pack(side=tk.RIGHT)
+		visual_icon = tk.PhotoImage(file="images/visual.png")
+		visual_button = tk.Button(tool_box, image=visual_icon, command=lambda: visual_repr())
+		visual_button.image = visual_icon
+		visual_button.pack(side=tk.LEFT, padx=2, pady=(2, 0))
+		self.add_tooltip(visual_button, "Progress visualization")
+
+		info_label_icon = tk.PhotoImage(file="images/info.png")
+		info_label = tk.Label(tool_box, image=info_label_icon)
+		info_label.image = info_label_icon
+		info_label.pack(side=tk.RIGHT)
+		text_info = (
+			f"File name: {os.path.basename(self.data_file)}\n"
+			f"Size: {round(os.path.getsize(self.data_file) / 1024, 2)}\n"
+			f"Created: {datetime.fromtimestamp(os.path.getctime(self.data_file)).strftime('%Y-%m-%d %H:%M:%S')}\n"
+			f"Modified: {datetime.fromtimestamp(os.path.getmtime(self.data_file)).strftime('%Y-%m-%d %H:%M:%S')}\n"
+			f"Exercises: {len(self.load_data())}"
+		)
+		self.add_tooltip(info_label, text_info)
 
 		headings = ["Date", "Exercise", "Weight", "Repetitions"]
 		table = ttk.Treeview(records_window, columns=headings, show="headings")
@@ -373,7 +438,7 @@ class TrainingLogApp:
 				table.column(j, anchor="center")
 
 		display_data(self.data)
-		table.grid(row=1, column=0, sticky="nsew", padx=1, pady=(2, 0))
+		table.grid(row=1, column=0, sticky="nsew", padx=1, pady=0)
 		create_context_menu(table)
 
 		filter_frame = tk.Frame(records_window)
@@ -403,9 +468,11 @@ class TrainingLogApp:
 			selectbackground="green",
 			selectforeground="white"
 		)
+		end_date_entry.set_date(start_date_entry.get_date() + timedelta(days=7))
 		end_date_entry.grid(row=2, column=2, sticky="ew", padx=0, pady=(0, 2))
 		apply_button = tk.Button(filter_frame, text="Request", command=lambda: apply_filter())
 		apply_button.grid(row=2, column=3, sticky="ew", padx=2, pady=(2, 2))
+		apply_filter()
 
 
 def main():
