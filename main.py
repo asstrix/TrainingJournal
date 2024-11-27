@@ -7,10 +7,12 @@ from datetime import datetime
 
 class TrainingLogApp:
 	def __init__(self, root):
-		self.data_file = None
-		self.data = []
 		self.root = root
 		root.title("Training Journal")
+		root.geometry(f"{300}x{200}+{(root.winfo_screenwidth() - 300) // 4}+{(root.winfo_screenheight() - 200) // 3}")
+
+		self.data_file = None
+		self.data = []
 		self.date_entry_label = ttk.Label(self.root, text="Date:")
 		self.date_entry = DateEntry(
 			self.root, width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
@@ -27,23 +29,37 @@ class TrainingLogApp:
 		self.weight_entry = ttk.Entry(self.root)
 		self.repetitions_label = ttk.Label(self.root, text="Repetitions:")
 		self.repetitions_entry = ttk.Entry(self.root)
-		self.add_button = ttk.Button(self.root, text="Add", command=self.add_entry)
-		self.view_button = ttk.Button(self.root, text="View all", command=self.view_records)
-		self.open_button = ttk.Button(self.root, text='Open JSON', command=self.open_file)
+		self.tool_box = tk.Frame(self.root)
+		self.view_button = ttk.Button(self.tool_box, command=self.view_records)
 		self.create_widgets()
 
 	def create_widgets(self):
-		self.date_entry_label.grid(column=0, row=0, sticky='ew', padx=5, pady=1)
-		self.date_entry.grid(column=1, row=0, sticky='ew', padx=5, pady=1)
-		self.exercise_label.grid(column=0, row=1, sticky='ew', padx=5, pady=1)
-		self.exercise_entry.grid(column=1, row=1, sticky='ew', padx=5, pady=1)
-		self.weight_label.grid(column=0, row=2, sticky='ew', padx=5, pady=1)
-		self.weight_entry.grid(column=1, row=2, sticky='ew', padx=5, pady=1)
-		self.repetitions_label.grid(column=0, row=3, sticky='ew', padx=5, pady=1)
-		self.repetitions_entry.grid(column=1, row=3, sticky='ew', padx=5, pady=1)
-		self.add_button.grid(column=0, row=4, pady=5)
-		self.view_button.grid(column=0, row=5, pady=5)
-		self.open_button.grid(column=0, row=6, pady=5)
+		self.root.grid_columnconfigure(1, weight=1)
+		self.tool_box.grid(column=0, row=0, sticky='ew', padx=5, pady=1)
+		self.date_entry_label.grid(column=0, row=1, sticky='ew', padx=5, pady=1)
+		self.date_entry.grid(column=1, row=1, sticky='ew', padx=5, pady=1)
+		self.exercise_label.grid(column=0, row=2, sticky='ew', padx=5, pady=1)
+		self.exercise_entry.grid(column=1, row=2, sticky='ew', padx=5, pady=1)
+		self.weight_label.grid(column=0, row=3, sticky='ew', padx=5, pady=1)
+		self.weight_entry.grid(column=1, row=3, sticky='ew', padx=5, pady=1)
+		self.repetitions_label.grid(column=0, row=4, sticky='ew', padx=5, pady=1)
+		self.repetitions_entry.grid(column=1, row=4, sticky='ew', padx=5, pady=1)
+
+		add_button = ttk.Button(self.root, text="Add", width=5, command=self.add_entry)
+		add_button.grid(column=1, row=5, pady=1)
+
+		view_button_icon = tk.PhotoImage(file="images/view.png")
+		self.view_button.config(image=view_button_icon, state='disabled')
+		self.view_button.image = view_button_icon
+		self.view_button.pack(side=tk.LEFT)
+		self.add_tooltip(self.view_button, 'View all')
+
+		open_button_icon = tk.PhotoImage(file="images/open.png")
+		open_button = ttk.Button(self.tool_box, image=open_button_icon, command=self.open_file)
+		open_button.image = open_button_icon
+		self.add_tooltip(open_button, "Open JSON")
+		self.view_button.pack(side=tk.LEFT)
+		open_button.pack(side=tk.LEFT)
 
 	def add_entry(self):
 		date = self.date_entry.get()
@@ -69,7 +85,6 @@ class TrainingLogApp:
 			self.data = self.load_data()
 		self.data.append(entry)
 		self.save_data()
-		# self.display_data(self.data)
 
 		# Очистка полей ввода после добавления
 		self.exercise_entry.delete(0, tk.END)
@@ -84,6 +99,7 @@ class TrainingLogApp:
 		)
 		self.data_file = file_path
 		self.view_records()
+		self.view_button.config(state='enabled')
 
 	def load_data(self):
 		with open(self.data_file, 'r') as file:
@@ -200,21 +216,30 @@ class TrainingLogApp:
 
 		def create_context_menu(tree):
 			menu = tk.Menu(tree, tearoff=0)
+			edit_image = tk.PhotoImage(file="images/edit.png")
+			delete_image = tk.PhotoImage(file="images/delete.png")
 
-			def edit_row():
-				selected_row = tree.selection()
+			edit_label = None
+			delete_label = None
+
+			def edit_row(row_id=None):
+				"""Редактирует выбранную строку."""
+				selected_row = row_id if row_id else tree.selection()
 				if not selected_row:
 					messagebox.showwarning("No selection", "Please select a row to edit.")
 					return
+
 				current_values = tree.item(selected_row, "values")
+				column_names = tree["columns"]
+
 				edit_window = tk.Toplevel()
-				edit_window.title("Edit Row")
-				edit_window.geometry("400x200")
+				edit_window.title("Edit exercise")
+				edit_window.geometry(f"{400}x{200}+{(edit_window.winfo_screenwidth() - 400) // 2}+{(edit_window.winfo_screenheight() - 200) // 2}")
 
 				entry_widgets = []
 				for idx, value in enumerate(current_values):
-					tk.Label(edit_window, text=f"Column {idx + 1}:").grid(row=idx, column=0, padx=10, pady=5,
-																		  sticky="w")
+					tk.Label(edit_window, text=f"{column_names[idx]}:").grid(row=idx, column=0, padx=10, pady=5,
+																			 sticky="w")
 					entry = tk.Entry(edit_window, width=30)
 					entry.insert(0, value)
 					entry.grid(row=idx, column=1, padx=10, pady=5)
@@ -233,11 +258,12 @@ class TrainingLogApp:
 					self.save_data()
 					edit_window.destroy()
 
-				ttk.Button(edit_window, text="Save", command=save_changes).grid(row=len(current_values), column=0,
-																				columnspan=2, pady=10)
+				ttk.Button(edit_window, text="Save", command=save_changes).grid(
+					row=len(current_values), column=0, columnspan=2, pady=10
+				)
 
-			def delete_row():
-				selected_item = tree.selection()
+			def delete_row(row_id=None):
+				selected_item = row_id if row_id else tree.selection()
 				if not selected_item:
 					messagebox.showwarning("No selection", "Please select a row to delete.")
 					return
@@ -249,6 +275,37 @@ class TrainingLogApp:
 					del self.data[row_index]
 					self.save_data()
 
+			def show_hover_icons(event):
+				nonlocal edit_label, delete_label
+
+				row_id = tree.identify_row(event.y)
+				col_id = tree.identify_column(event.x)
+
+				if row_id and col_id == f"#{len(tree['columns'])}":
+					bbox = tree.bbox(row_id, col_id)
+					if bbox:
+						x, y, width, height = bbox
+						destroy_hover_icons()
+
+						edit_label = tk.Label(tree, image=edit_image, cursor="hand2")
+						edit_label.place(x=x + width - 50, y=y, width=20, height=20)
+						edit_label.bind("<Button-1>", lambda e: edit_row(row_id))
+
+						delete_label = tk.Label(tree, image=delete_image, cursor="hand2")
+						delete_label.place(x=x + width - 25, y=y, width=20, height=20)
+						delete_label.bind("<Button-1>", lambda e: delete_row(row_id))
+				else:
+					destroy_hover_icons()
+
+			def destroy_hover_icons():
+				nonlocal edit_label, delete_label
+				if isinstance(edit_label, tk.Label):
+					edit_label.destroy()
+					edit_label = None
+				if isinstance(delete_label, tk.Label):
+					delete_label.destroy()
+					delete_label = None
+
 			def context_menu(event):
 				row = tree.identify_row(event.y)
 				if row:
@@ -259,22 +316,26 @@ class TrainingLogApp:
 				row_id = tree.identify_row(event.y)
 				if row_id:
 					tree.selection_set(row_id)
-					edit_row()
+					edit_row(row_id)
 
 			def on_delete_key(event):
-				if tree.selection():
-					delete_row()
+				selected_row = tree.selection()
+				if selected_row:
+					delete_row(selected_row)
 
-			menu.add_command(label="Edit", command=edit_row)
-			menu.add_command(label="Delete", command=delete_row)
+			menu.add_command(label="Edit", command=lambda: edit_row())
+			menu.add_command(label="Delete", command=lambda: delete_row())
 
 			tree.bind("<Button-3>", context_menu)
+			tree.bind("<Motion>", show_hover_icons)
 			tree.bind("<Double-1>", on_double_click)
 			tree.bind("<Delete>", on_delete_key)
+			tree.bind("<Leave>", lambda e: destroy_hover_icons())
 
 		self.data = self.load_data()
 		records_window = Toplevel(self.root)
 		records_window.title("Records")
+		records_window.geometry(f"{800}x{300}+{(records_window.winfo_screenwidth() - 800) // 2}+{(records_window.winfo_screenheight() - 300) // 2}")
 
 		records_window.grid_columnconfigure(0, weight=1)
 		records_window.grid_rowconfigure(1, weight=1)
