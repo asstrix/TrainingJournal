@@ -16,6 +16,7 @@ class TrainingLogApp:
 		self.data_file = None
 		self.data = []
 		self.filtered_data = []
+		self.table = None
 		self.date_entry_label = ttk.Label(self.root, text="Date:")
 		self.date_entry = DateEntry(
 			self.root, width=12, borderwidth=2, date_pattern="dd.mm.yyyy",
@@ -88,13 +89,22 @@ class TrainingLogApp:
 			self.data = self.load_data()
 		self.data.append(entry)
 		if self.save_data():
-			# Очистка полей ввода после добавления
 			self.exercise_entry.delete(0, tk.END)
 			self.weight_entry.delete(0, tk.END)
 			self.repetitions_entry.delete(0, tk.END)
 			messagebox.showinfo("Success", "Exercise has been added!")
+			self.display_data(self.data)
 		else:
 			pass
+
+	def display_data(self, data_):
+		data_ = sorted(data_, key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'))
+		self.table.delete(*self.table.get_children())
+		for entry in data_:
+			self.table.insert(
+				'', tk.END,
+				values=(entry['date'], entry['exercise'], entry['weight'], entry['repetitions'])
+			)
 
 	def open_file(self):
 		file_path = filedialog.askopenfilename(
@@ -171,13 +181,6 @@ class TrainingLogApp:
 		widget.bind('<Leave>', hide_tooltip)
 
 	def view_records(self):
-		def display_data(data_):
-			table.delete(*table.get_children())
-			for entry in data_:
-				table.insert(
-					'', tk.END,
-					values=(entry['date'], entry['exercise'], entry['weight'], entry['repetitions'])
-				)
 
 		def apply_filter():
 			search = search_entry.get().strip().lower()
@@ -187,7 +190,7 @@ class TrainingLogApp:
 							 if ('*' in search or not search or search in entry['exercise'].lower())
 							 and (start_date <= datetime.strptime(entry['date'], "%d.%m.%Y").date() <= end_date)
 							 ]
-			display_data(self.filtered_data)
+			self.display_data(self.filtered_data)
 			search_entry.delete(0, tk.END)
 
 		def import_from_csv():
@@ -201,12 +204,12 @@ class TrainingLogApp:
 				with open(file_path, mode="r", encoding="utf-8") as file:
 					reader = csv.reader(file)
 					headers = next(reader, None)  # Первая строка - заголовки
-					tree_headers = [table.heading(col)["text"] for col in table["columns"]]
+					tree_headers = [self.table.heading(col)["text"] for col in self.table["columns"]]
 					if headers != tree_headers:
 						messagebox.showerror("Error", "CSV headers do not match Treeview headers.")
 						return
 					for row in reader:
-						table.insert("", "end", values=row)
+						self.table.insert("", "end", values=row)
 				messagebox.showinfo("Success", f"Data successfully loaded from {file_path}!")
 			except Exception as e:
 				messagebox.showerror("Error", f"An error occurred: {e}")
@@ -243,15 +246,12 @@ class TrainingLogApp:
 					data[exercise] = {"dates": [], "weights": []}
 				data[exercise]["dates"].append(entry["date"])
 				data[exercise]["weights"].append(entry["weight"])
-			# Создаем фигуру для графика
+			print(data)
 			fig = Figure(figsize=(8, 6), dpi=100)
-			ax = fig.add_subplot(111)  # Одиночный график
-
-			# Построение графиков для каждого упражнения
+			ax = fig.add_subplot(111)
 			for exercise, values in data.items():
-				ax.plot(values["dates"], values["weights"], label=exercise, marker="o")
-
-			# Настройка графика
+				if any(weight != 0 for weight in values["weights"]):
+					ax.plot(values["dates"], values["weights"], label=exercise, marker="o")
 			ax.set_title("Изменение веса по упражнениям")
 			ax.set_xlabel("Дата")
 			ax.set_ylabel("Вес")
@@ -262,7 +262,6 @@ class TrainingLogApp:
 			graph_window.title("График изменения веса")
 			graph_window.geometry("900x400")
 
-			# Встраиваем Matplotlib в Tkinter
 			canvas = FigureCanvasTkAgg(fig, master=graph_window)
 			canvas_widget = canvas.get_tk_widget()
 			canvas_widget.pack(fill=tk.BOTH, expand=True)
@@ -277,7 +276,19 @@ class TrainingLogApp:
 			delete_label = None
 
 			def edit_row(row_id=None):
-				"""Редактирует выбранную строку."""
+				def save_changes():
+					new_values = [k.get() for k in entry_widgets]
+					tree.item(selected_row, values=new_values)
+					ind_row = tree.index(selected_row)
+					self.data[ind_row] = {
+						"date": new_values[0],
+						"exercise": new_values[1],
+						"weight": new_values[2],
+						"repetitions": new_values[3],
+					}
+					self.save_data()
+					edit_window.destroy()
+
 				selected_row = row_id if row_id else tree.selection()
 				if not selected_row:
 					messagebox.showwarning("No selection", "Please select a row to edit.")
@@ -298,19 +309,6 @@ class TrainingLogApp:
 					entry.insert(0, value)
 					entry.grid(row=idx, column=1, padx=10, pady=5)
 					entry_widgets.append(entry)
-
-				def save_changes():
-					new_values = [k.get() for k in entry_widgets]
-					tree.item(selected_row, values=new_values)
-					ind_row = tree.index(selected_row)
-					self.data[ind_row] = {
-						"date": new_values[0],
-						"exercise": new_values[1],
-						"weight": new_values[2],
-						"repetitions": new_values[3],
-					}
-					self.save_data()
-					edit_window.destroy()
 
 				ttk.Button(edit_window, text="Save", command=save_changes).grid(
 					row=len(current_values), column=0, columnspan=2, pady=10
@@ -387,7 +385,6 @@ class TrainingLogApp:
 			tree.bind("<Leave>", lambda e: destroy_hover_icons())
 
 		self.data = self.load_data()
-
 		records_window = Toplevel(self.root)
 		records_window.title("Records")
 		records_window.geometry(f"{800}x{300}+{(records_window.winfo_screenwidth() - 800) // 2}+{(records_window.winfo_screenheight() - 300) // 2}")
@@ -406,7 +403,7 @@ class TrainingLogApp:
 		self.add_tooltip(import_button, "Import from csv")
 
 		export_icon = tk.PhotoImage(file="images/export.png")
-		export_button = tk.Button(tool_box, image=export_icon, command=lambda: export_to_csv(table))
+		export_button = tk.Button(tool_box, image=export_icon, command=lambda: export_to_csv(self.table))
 		export_button.image = export_icon
 		export_button.pack(side=tk.LEFT, padx=2, pady=(2, 0))
 		self.add_tooltip(export_button, "Export to csv")
@@ -431,15 +428,15 @@ class TrainingLogApp:
 		self.add_tooltip(info_label, text_info)
 
 		headings = ["Date", "Exercise", "Weight", "Repetitions"]
-		table = ttk.Treeview(records_window, columns=headings, show="headings")
+		self.table = ttk.Treeview(records_window, columns=headings, show="headings")
 		for i, j in enumerate(headings):
-			table.heading(j, text=j)
+			self.table.heading(j, text=j)
 			if i != 0:
-				table.column(j, anchor="center")
+				self.table.column(j, anchor="center")
 
-		display_data(self.data)
-		table.grid(row=1, column=0, sticky="nsew", padx=1, pady=0)
-		create_context_menu(table)
+		self.display_data(self.data)
+		self.table.grid(row=1, column=0, sticky="nsew", padx=1, pady=0)
+		create_context_menu(self.table)
 
 		filter_frame = tk.Frame(records_window)
 		filter_frame.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
