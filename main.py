@@ -44,7 +44,7 @@ class TrainingLogApp:
 		self.root = root
 		root.title("Training Journal")
 		root.geometry(f"{300}x{200}+{(root.winfo_screenwidth() - 300) // 4}+{(root.winfo_screenheight() - 200) // 3}")
-
+		self.records_window = None
 		self.data_file = None
 		self.data = []
 		self.filtered_data = []
@@ -246,7 +246,6 @@ class TrainingLogApp:
 		"""
 		Opens a new window displaying all training records in a table view.
 		"""
-
 		def apply_filter():
 			"""
 			Filters the training records based on user input.
@@ -503,16 +502,20 @@ class TrainingLogApp:
 			table.bind("<Delete>", on_delete_key)
 			table.bind("<Leave>", lambda e: destroy_hover_icons())
 
+		try:
+			self.records_window.destroy()
+		except AttributeError:
+			pass
 		self.data = self.load_data()
-		records_window = Toplevel(self.root)
-		records_window.title("Records")
-		records_window.geometry(f"{800}x{300}+{(records_window.winfo_screenwidth() - 800) // 2}+{(records_window.winfo_screenheight() - 300) // 2}")
+		self.records_window = Toplevel(self.root)
+		self.records_window.title("Records")
+		self.records_window.geometry(f"{800}x{300}+{(self.records_window.winfo_screenwidth() - 800) // 2}+{(self.records_window.winfo_screenheight() - 300) // 2}")
 
-		records_window.grid_columnconfigure(0, weight=1)
-		records_window.grid_rowconfigure(1, weight=1)
-		records_window.grid_rowconfigure(2, weight=0)
+		self.records_window.grid_columnconfigure(0, weight=1)
+		self.records_window.grid_rowconfigure(1, weight=1)
+		self.records_window.grid_rowconfigure(2, weight=0)
 
-		tool_box = tk.Frame(records_window)
+		tool_box = tk.Frame(self.records_window)
 		tool_box.grid(row=0, column=0, sticky="ew", padx=1, pady=(0, 5))
 
 		import_icon = tk.PhotoImage(file="images/import.png")
@@ -547,7 +550,7 @@ class TrainingLogApp:
 		self.add_tooltip(info_label, text_info)
 
 		headings = ["Date", "Exercise", "Weight", "Repetitions"]
-		self.table = ttk.Treeview(records_window, columns=headings, show="headings")
+		self.table = ttk.Treeview(self.records_window, columns=headings, show="headings")
 		for i, j in enumerate(headings):
 			self.table.heading(j, text=j)
 			if i != 0:
@@ -557,7 +560,7 @@ class TrainingLogApp:
 		self.table.grid(row=1, column=0, sticky="nsew", padx=1, pady=0)
 		create_context_menu(self.table)
 
-		filter_frame = tk.Frame(records_window)
+		filter_frame = tk.Frame(self.records_window)
 		filter_frame.grid(row=2, column=0, sticky="ew", padx=1, pady=(0, 2))
 		filter_frame.columnconfigure(0, weight=7)
 		filter_frame.columnconfigure(1, weight=1)
