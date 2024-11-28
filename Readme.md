@@ -60,6 +60,12 @@ python main.py
 # Screenshots
 **Add Records**
 
+![Alt text](https://raw.githubusercontent.com/asstrix/files/main/TrainingJournal/add.png) 
+
 **View Records**
 
+![Alt text](https://github.com/asstrix/files/blob/dc0c1922bcb7fdc423fe63fa8d76eae1858babc5/TrainingJournal/veiw_records.png) 
+
 **Visualize Progress**
+
+![Alt text](https://raw.githubusercontent.com/asstrix/files/main/TrainingJournal/chart.png) 
