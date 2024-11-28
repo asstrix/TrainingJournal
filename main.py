@@ -130,8 +130,7 @@ class TrainingLogApp:
 			self.exercise_entry.delete(0, tk.END)
 			self.weight_entry.delete(0, tk.END)
 			self.repetitions_entry.delete(0, tk.END)
-			messagebox.showinfo("Success", "Exercise has been added!")
-			self.display_data(self.data)
+			self.view_records()
 		else:
 			pass
 
@@ -142,13 +141,16 @@ class TrainingLogApp:
 		Args:
 			data_ (list): A list of dictionaries containing training records.
 		"""
-		data_ = sorted(data_, key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'))
-		self.table.delete(*self.table.get_children())
-		for entry in data_:
-			self.table.insert(
-				'', tk.END,
-				values=(entry['date'], entry['exercise'], entry['weight'], entry['repetitions'])
-			)
+		data_ = sorted(data_, key=lambda x: datetime.strptime(x['Date'], '%d.%m.%Y'))
+		try:
+			self.table.delete(*self.table.get_children())
+			for entry in data_:
+				self.table.insert(
+					'', tk.END,
+					values=(entry['Date'], entry['Exercise'], entry['Weight'], entry['Repetitions'])
+				)
+		except tk.TclError:
+			pass
 
 	def open_file(self):
 		"""
@@ -189,11 +191,12 @@ class TrainingLogApp:
 					f"The file '{self.data_file}' already exists. Do you want to overwrite it?"
 				)
 				if not confirm:
+					pass
 					return False
 				else:
-					with open(self.data_file, 'w') as file:
-						json.dump(self.data, file, indent=4)
 					return True
+			with open(self.data_file, 'w') as file:
+				json.dump(self.data, file, indent=4)
 		else:
 			with open(self.data_file, 'w') as file:
 				json.dump(self.data, file, indent=4)
@@ -257,7 +260,7 @@ class TrainingLogApp:
 			end_date = end_date_entry.get_date()
 			self.filtered_data = [entry for entry in self.data
 							 if ('*' in search or not search or search in entry['exercise'].lower())
-							 and (start_date <= datetime.strptime(entry['date'], "%d.%m.%Y").date() <= end_date)
+							 and (start_date <= datetime.strptime(entry['Date'], "%d.%m.%Y").date() <= end_date)
 							 ]
 			self.display_data(self.filtered_data)
 			search_entry.delete(0, tk.END)
@@ -282,13 +285,15 @@ class TrainingLogApp:
 					return
 				with open(file_path, mode="r", encoding="utf-8") as file:
 					reader = csv.reader(file)
-					headers = next(reader, None)  # Первая строка - заголовки
+					headers = next(reader, None)
 					tree_headers = [self.table.heading(col)["text"] for col in self.table["columns"]]
 					if headers != tree_headers:
 						messagebox.showerror("Error", "CSV headers do not match Treeview headers.")
 						return
 					for row in reader:
 						self.table.insert("", "end", values=row)
+						self.data.append(dict(zip(headers, row)))
+						self.save_data()
 				messagebox.showinfo("Success", f"Data successfully loaded from {file_path}!")
 			except Exception as e:
 				messagebox.showerror("Error", f"An error occurred: {e}")
@@ -326,6 +331,7 @@ class TrainingLogApp:
 					writer = csv.writer(file)
 					writer.writerow(headers)
 					writer.writerows(data_)
+					messagebox.showinfo("Success", f"Data successfully uploaded to {file_path}!")
 			except Exception as e:
 				messagebox.showerror("Error", f"An error occurred: {e}")
 
@@ -342,29 +348,29 @@ class TrainingLogApp:
 				- Each exercise represented as a separate line.
 			"""
 			data = {}
-			for entry in self.filtered_data:
-				exercise = entry["exercise"]
+			for row_id in self.table.get_children():
+				entry = self.table.item(row_id, "values")
+				date, exercise, weight = entry[0], entry[1], entry[2]
 				if exercise not in data:
 					data[exercise] = {"dates": [], "weights": []}
-				data[exercise]["dates"].append(entry["date"])
-				data[exercise]["weights"].append(entry["weight"])
-			print(data)
+				data[exercise]["dates"].append(date)
+				data[exercise]["weights"].append(weight)
 			fig = Figure(figsize=(8, 6), dpi=100)
 			ax = fig.add_subplot(111)
 			for exercise, values in data.items():
 				if any(weight != 0 for weight in values["weights"]):
 					ax.plot(values["dates"], values["weights"], label=exercise, marker="o")
-			ax.set_title("Изменение веса по упражнениям")
-			ax.set_xlabel("Дата")
-			ax.set_ylabel("Вес")
+			ax.set_title("Weight change by exercise")
+			ax.set_xlabel("Date")
+			ax.set_ylabel("Weight")
 			ax.legend()
 			ax.grid()
 
-			graph_window = Toplevel()
-			graph_window.title("График изменения веса")
-			graph_window.geometry("900x400")
+			chart = Toplevel()
+			chart.title("Weight change chart")
+			chart.geometry("900x400")
 
-			canvas = FigureCanvasTkAgg(fig, master=graph_window)
+			canvas = FigureCanvasTkAgg(fig, master=chart)
 			canvas_widget = canvas.get_tk_widget()
 			canvas_widget.pack(fill=tk.BOTH, expand=True)
 			canvas.draw()
@@ -439,10 +445,13 @@ class TrainingLogApp:
 
 				confirm = messagebox.askyesno("Delete Row", "Are you sure you want to delete the selected row?")
 				if confirm:
-					row_index = table.index(selected_item)
-					table.delete(selected_item)
-					del self.data[row_index]
-					self.save_data()
+					try:
+						row_index = table.index(selected_item)
+						table.delete(selected_item)
+						del self.data[row_index]
+						self.save_data()
+					except tk.TclError:
+						pass
 
 			def show_hover_icons(event):
 				nonlocal edit_label, delete_label
@@ -475,12 +484,6 @@ class TrainingLogApp:
 					delete_label.destroy()
 					delete_label = None
 
-			def context_menu(event):
-				row = table.identify_row(event.y)
-				if row:
-					table.selection_set(row)
-					menu.post(event.x_root, event.y_root)
-
 			def on_double_click(event):
 				row_id = table.identify_row(event.y)
 				if row_id:
@@ -495,7 +498,6 @@ class TrainingLogApp:
 			menu.add_command(label="Edit", command=lambda: edit_row())
 			menu.add_command(label="Delete", command=lambda: delete_row())
 
-			table.bind("<Button-3>", context_menu)
 			table.bind("<Motion>", show_hover_icons)
 			table.bind("<Double-1>", on_double_click)
 			table.bind("<Delete>", on_delete_key)
