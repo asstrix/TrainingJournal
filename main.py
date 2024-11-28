@@ -380,7 +380,7 @@ class TrainingLogApp:
 			Adds a context menu with options to edit or delete rows in the table.
 
 			Args:
-				table (ttk.Treeview): The table widget to which the context menu is attached.
+				table (tk.Treeview): The table widget to which the context menu is attached.
 
 			Features:
 				- Edit: Opens a window to modify the selected record.
