@@ -55,7 +55,7 @@ python main.py
 * Generate a line graph to monitor your progress over time.
 
 **6. Edit/Delete Records:**<br>
-* Right-click on a row in the table to edit or delete the record.
+* Double-click on a row in the table to edit or delete the record.
 
 # Screenshots
 **Add Records**
