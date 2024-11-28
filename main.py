@@ -137,7 +137,7 @@ class TrainingLogApp:
 
 	def display_data(self, data_):
 		"""
-		Displays the provided data in the table view.
+		Displays the provided data sorted by date in the table view.
 
 		Args:
 			data_ (list): A list of dictionaries containing training records.
