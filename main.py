@@ -118,10 +118,10 @@ class TrainingLogApp:
 			return
 
 		entry = {
-			'date': date,
-			'exercise': exercise,
-			'weight': weight,
-			'repetitions': repetitions
+			'Date': date,
+			'Exercise': exercise,
+			'Weight': weight,
+			'Repetitions': repetitions
 		}
 		if self.data_file:
 			self.data = self.load_data()
@@ -259,7 +259,7 @@ class TrainingLogApp:
 			start_date = start_date_entry.get_date()
 			end_date = end_date_entry.get_date()
 			self.filtered_data = [entry for entry in self.data
-							 if ('*' in search or not search or search in entry['exercise'].lower())
+							 if ('*' in search or not search or search in entry['Exercise'].lower())
 							 and (start_date <= datetime.strptime(entry['Date'], "%d.%m.%Y").date() <= end_date)
 							 ]
 			self.display_data(self.filtered_data)
