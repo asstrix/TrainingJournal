@@ -184,7 +184,7 @@ class TrainingLogApp:
 			bool: True if the data was successfully saved, False otherwise.
 		"""
 		if not self.data_file:
-			self.data_file = 'training_journal.json'
+			self.data_file = 'training_log.json'
 			if os.path.exists(self.data_file):
 				confirm = messagebox.askyesno(
 					"File Exists",
