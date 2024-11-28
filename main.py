@@ -421,7 +421,10 @@ class TrainingLogApp:
 
 				edit_window = tk.Toplevel()
 				edit_window.title("Edit exercise")
-				edit_window.geometry(f"{400}x{200}+{(edit_window.winfo_screenwidth() - 400) // 2}+{(edit_window.winfo_screenheight() - 200) // 2}")
+				edit_window.geometry(
+					f"{400}x{200}+{(edit_window.winfo_screenwidth() - 400) // 2}+"
+					f"{(edit_window.winfo_screenheight() - 200) // 2}"
+				)
 
 				entry_widgets = []
 				for idx, value in enumerate(current_values):
@@ -509,7 +512,10 @@ class TrainingLogApp:
 		self.data = self.load_data()
 		self.records_window = Toplevel(self.root)
 		self.records_window.title("Records")
-		self.records_window.geometry(f"{800}x{300}+{(self.records_window.winfo_screenwidth() - 800) // 2}+{(self.records_window.winfo_screenheight() - 300) // 2}")
+		self.records_window.geometry(
+			f"{800}x{300}+{(self.records_window.winfo_screenwidth() - 800) // 2}+"
+			f"{(self.records_window.winfo_screenheight() - 300) // 2}"
+		)
 
 		self.records_window.grid_columnconfigure(0, weight=1)
 		self.records_window.grid_rowconfigure(1, weight=1)
