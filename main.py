@@ -8,7 +8,39 @@ from datetime import datetime, timedelta
 
 
 class TrainingLogApp:
+	"""
+	This application allows users to:
+	- Add new training records (exercise, weight, repetitions, date).
+	- View, edit, and delete records in a table.
+	- Filter records by date or search text.
+	- Save and load records from JSON files.
+	- Export and import records to/from CSV files.
+	- Visualize progress via graphs.
+	    """
 	def __init__(self, root):
+		"""
+		Initializes the main application window and its widgets.
+
+		Args:
+			root (tk.Tk): The root Tkinter window for the application.
+
+		Attributes:
+		root (tk.Tk): The root Tkinter window for the application.
+		data_file (str or None): Path to the currently loaded JSON file containing training data.
+		data (list): A list of dictionaries representing all training records.
+		filtered_data (list): A filtered subset of `data` based on user-defined criteria.
+		table (ttk.Treeview or None): The table widget used to display records in the "View Records" window.
+		date_entry_label (ttk.Label): A label for the date entry field.
+		date_entry (tkcalendar.DateEntry): A widget for selecting dates in the training log.
+		exercise_label (ttk.Label): A label for the exercise entry field.
+		exercise_entry (ttk.Entry): An entry field for the exercise name.
+		weight_label (ttk.Label): A label for the weight entry field.
+		weight_entry (ttk.Entry): An entry field for the weight in kilograms.
+		repetitions_label (ttk.Label): A label for the repetitions entry field.
+		repetitions_entry (ttk.Entry): An entry field for the number of repetitions.
+		tool_box (tk.Frame): A frame widget that contains toolbar buttons (e.g., "View", "Open").
+		view_button (ttk.Button): A button for opening the "View Records" window, initially disabled.
+		"""
 		self.root = root
 		root.title("Training Journal")
 		root.geometry(f"{300}x{200}+{(root.winfo_screenwidth() - 300) // 4}+{(root.winfo_screenheight() - 200) // 3}")
@@ -38,6 +70,9 @@ class TrainingLogApp:
 		self.create_widgets()
 
 	def create_widgets(self):
+		"""
+		Arranges the widgets in the application window and configures layout.
+		"""
 		self.root.grid_columnconfigure(1, weight=1)
 		self.tool_box.grid(column=0, row=0, sticky='ew', padx=5, pady=1)
 		self.date_entry_label.grid(column=0, row=1, sticky='ew', padx=5, pady=1)
@@ -66,6 +101,9 @@ class TrainingLogApp:
 		open_button.pack(side=tk.LEFT)
 
 	def add_entry(self):
+		"""
+		Adds a new training record to the data list after validating user input.
+		"""
 		date = self.date_entry.get()
 		exercise = self.exercise_entry.get()
 		weight = self.weight_entry.get()
@@ -98,6 +136,12 @@ class TrainingLogApp:
 			pass
 
 	def display_data(self, data_):
+		"""
+		Displays the provided data in the table view.
+
+		Args:
+			data_ (list): A list of dictionaries containing training records.
+		"""
 		data_ = sorted(data_, key=lambda x: datetime.strptime(x['date'], '%d.%m.%Y'))
 		self.table.delete(*self.table.get_children())
 		for entry in data_:
@@ -107,6 +151,9 @@ class TrainingLogApp:
 			)
 
 	def open_file(self):
+		"""
+		Opens a JSON file and loads training records from it.
+		"""
 		file_path = filedialog.askopenfilename(
 			title="Select a JSON file",
 			filetypes=(("JSON Files", "*.json"), ("All Files", "*.*"))
@@ -118,10 +165,22 @@ class TrainingLogApp:
 		self.view_button.config(state='enabled')
 
 	def load_data(self):
+		"""
+		Loads data from the currently selected JSON file.
+
+		Returns:
+			list: A list of training records loaded from the file.
+		"""
 		with open(self.data_file, 'r') as file:
 			return json.load(file)
 
 	def save_data(self):
+		"""
+		Saves the current data to the JSON file.
+
+		Returns:
+			bool: True if the data was successfully saved, False otherwise.
+		"""
 		if not self.data_file:
 			self.data_file = 'training_journal.json'
 			if os.path.exists(self.data_file):
@@ -181,8 +240,18 @@ class TrainingLogApp:
 		widget.bind('<Leave>', hide_tooltip)
 
 	def view_records(self):
+		"""
+		Opens a new window displaying all training records in a table view.
+		"""
 
 		def apply_filter():
+			"""
+			Filters the training records based on user input.
+
+			Updates:
+				self.filtered_data: A subset of `self.data` matching the filter criteria.
+				Table view is updated to display only the filtered records.
+			"""
 			search = search_entry.get().strip().lower()
 			start_date = start_date_entry.get_date()
 			end_date = end_date_entry.get_date()
@@ -194,6 +263,16 @@ class TrainingLogApp:
 			search_entry.delete(0, tk.END)
 
 		def import_from_csv():
+			"""
+			Imports training records from a CSV file into the table.
+
+			Prompts the user to select a CSV file. Verifies that the file headers match
+			the table columns before inserting rows. Displays error messages if issues
+			are encountered during the import.
+
+			Raises:
+				messagebox.showerror: If CSV headers do not match or file operation fails.
+			"""
 			try:
 				file_path = filedialog.askopenfilename(
 					title="Select a CSV file",
@@ -215,6 +294,18 @@ class TrainingLogApp:
 				messagebox.showerror("Error", f"An error occurred: {e}")
 
 		def export_to_csv(training_list):
+			"""
+			Exports the displayed training records to a CSV file.
+
+			Prompts the user to select a save location and filename. Writes the
+			table's headers and rows to the file.
+
+			Args:
+				training_list (ttk.Treeview): The table widget containing records to export.
+
+			Raises:
+				messagebox.showerror: If file save operation fails.
+			"""
 			try:
 				file_path = filedialog.asksaveasfilename(
 					title="Save as",
@@ -239,6 +330,17 @@ class TrainingLogApp:
 				messagebox.showerror("Error", f"An error occurred: {e}")
 
 		def visual_repr():
+			"""
+			Creates a line graph showing weight progress for each exercise that has at least 1 weight > 0
+
+			Uses the filtered data to plot weights over time for each exercise.
+			Opens the graph in a new top-level window.
+
+			Visualizes:
+				- X-axis: Date
+				- Y-axis: Weight
+				- Each exercise represented as a separate line.
+			"""
 			data = {}
 			for entry in self.filtered_data:
 				exercise = entry["exercise"]
@@ -267,8 +369,23 @@ class TrainingLogApp:
 			canvas_widget.pack(fill=tk.BOTH, expand=True)
 			canvas.draw()
 
-		def create_context_menu(tree):
-			menu = tk.Menu(tree, tearoff=0)
+		def create_context_menu(table):
+			"""
+			Adds a context menu with options to edit or delete rows in the table.
+
+			Args:
+				table (ttk.Treeview): The table widget to which the context menu is attached.
+
+			Features:
+				- Edit: Opens a window to modify the selected record.
+				- Delete: Removes the selected record after confirmation.
+				- Hover icons for quick editing and deletion.
+				- Keyboard shortcuts: Double-click to edit, 'Delete' key to remove.
+
+			Raises:
+				messagebox.showwarning: If no row is selected for editing or deletion.
+			"""
+			menu = tk.Menu(table, tearoff=0)
 			edit_image = tk.PhotoImage(file="images/edit.png")
 			delete_image = tk.PhotoImage(file="images/delete.png")
 
@@ -278,8 +395,8 @@ class TrainingLogApp:
 			def edit_row(row_id=None):
 				def save_changes():
 					new_values = [k.get() for k in entry_widgets]
-					tree.item(selected_row, values=new_values)
-					ind_row = tree.index(selected_row)
+					table.item(selected_row, values=new_values)
+					ind_row = table.index(selected_row)
 					self.data[ind_row] = {
 						"date": new_values[0],
 						"exercise": new_values[1],
@@ -289,13 +406,13 @@ class TrainingLogApp:
 					self.save_data()
 					edit_window.destroy()
 
-				selected_row = row_id if row_id else tree.selection()
+				selected_row = row_id if row_id else table.selection()
 				if not selected_row:
 					messagebox.showwarning("No selection", "Please select a row to edit.")
 					return
 
-				current_values = tree.item(selected_row, "values")
-				column_names = tree["columns"]
+				current_values = table.item(selected_row, "values")
+				column_names = table["columns"]
 
 				edit_window = tk.Toplevel()
 				edit_window.title("Edit exercise")
@@ -315,35 +432,35 @@ class TrainingLogApp:
 				)
 
 			def delete_row(row_id=None):
-				selected_item = row_id if row_id else tree.selection()
+				selected_item = row_id if row_id else table.selection()
 				if not selected_item:
 					messagebox.showwarning("No selection", "Please select a row to delete.")
 					return
 
 				confirm = messagebox.askyesno("Delete Row", "Are you sure you want to delete the selected row?")
 				if confirm:
-					row_index = tree.index(selected_item)
-					tree.delete(selected_item)
+					row_index = table.index(selected_item)
+					table.delete(selected_item)
 					del self.data[row_index]
 					self.save_data()
 
 			def show_hover_icons(event):
 				nonlocal edit_label, delete_label
 
-				row_id = tree.identify_row(event.y)
-				col_id = tree.identify_column(event.x)
+				row_id = table.identify_row(event.y)
+				col_id = table.identify_column(event.x)
 
-				if row_id and col_id == f"#{len(tree['columns'])}":
-					bbox = tree.bbox(row_id, col_id)
+				if row_id and col_id == f"#{len(table['columns'])}":
+					bbox = table.bbox(row_id, col_id)
 					if bbox:
 						x, y, width, height = bbox
 						destroy_hover_icons()
 
-						edit_label = tk.Label(tree, image=edit_image, cursor="hand2")
+						edit_label = tk.Label(table, image=edit_image, cursor="hand2")
 						edit_label.place(x=x + width - 50, y=y, width=20, height=20)
 						edit_label.bind("<Button-1>", lambda e: edit_row(row_id))
 
-						delete_label = tk.Label(tree, image=delete_image, cursor="hand2")
+						delete_label = tk.Label(table, image=delete_image, cursor="hand2")
 						delete_label.place(x=x + width - 25, y=y, width=20, height=20)
 						delete_label.bind("<Button-1>", lambda e: delete_row(row_id))
 				else:
@@ -359,30 +476,30 @@ class TrainingLogApp:
 					delete_label = None
 
 			def context_menu(event):
-				row = tree.identify_row(event.y)
+				row = table.identify_row(event.y)
 				if row:
-					tree.selection_set(row)
+					table.selection_set(row)
 					menu.post(event.x_root, event.y_root)
 
 			def on_double_click(event):
-				row_id = tree.identify_row(event.y)
+				row_id = table.identify_row(event.y)
 				if row_id:
-					tree.selection_set(row_id)
+					table.selection_set(row_id)
 					edit_row(row_id)
 
 			def on_delete_key(event):
-				selected_row = tree.selection()
+				selected_row = table.selection()
 				if selected_row:
 					delete_row(selected_row)
 
 			menu.add_command(label="Edit", command=lambda: edit_row())
 			menu.add_command(label="Delete", command=lambda: delete_row())
 
-			tree.bind("<Button-3>", context_menu)
-			tree.bind("<Motion>", show_hover_icons)
-			tree.bind("<Double-1>", on_double_click)
-			tree.bind("<Delete>", on_delete_key)
-			tree.bind("<Leave>", lambda e: destroy_hover_icons())
+			table.bind("<Button-3>", context_menu)
+			table.bind("<Motion>", show_hover_icons)
+			table.bind("<Double-1>", on_double_click)
+			table.bind("<Delete>", on_delete_key)
+			table.bind("<Leave>", lambda e: destroy_hover_icons())
 
 		self.data = self.load_data()
 		records_window = Toplevel(self.root)
